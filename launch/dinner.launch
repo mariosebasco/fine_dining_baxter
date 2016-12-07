@@ -1,0 +1,4 @@
+<launch>
+    <node name="dapper_baxter" pkg="example" type="dapper_baxter.py"/>
+    <node name="ik_node" pkg="example" type="ik_node.py"/>
+</launch>
