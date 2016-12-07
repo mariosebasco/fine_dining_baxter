@@ -5,6 +5,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 import numpy as np
 from baxter_core_msgs.msg import EndpointState
+from baxter_final.srv import image_proc
+#from baxter_final.msg import ArmMovement
 
 
 bridge = CvBridge() #Creates obj for sending poop btwn ros and opencv
@@ -68,7 +70,7 @@ def imagecb(data):
         # upper_red = np.array([10, 255, 255])
 
         #Def mask using set hsv range
-        color = 'red'
+        #color = 'red'
         mask = cv2.inRange(hsv,color_dict[color]['lower'] ,color_dict[color]['upper'])
         mask = cv2.erode(mask,None,iterations=5)
         mask = cv2.dilate(mask,None,iterations=5)
@@ -100,11 +102,12 @@ def imagecb(data):
             calibration = 0.0023
             cam_disp_x = 0.02
             cam_disp_y = -0.02
-            z_disp = rospy.get_param('/zoff')
+            z_disp = rospy.get_param('/init_lift')
             cx = center[0]
             cy = center[1]
             print 'Bpx=',Bpx
             print 'Bpy=',Bpy
+            global xb,yb
             xb = (cy - 0.5*height)*calibration*z_disp + Bpx + cam_disp_x
             yb = (cx - 0.5*width)*calibration*z_disp + Bpy + cam_disp_y
             print 'xb=',xb
@@ -125,6 +128,16 @@ def get_body_stuff(data):
     global Bpx, Bpy
     Bpx = data.pose.position.x
     Bpy = data.pose.position.y
+    Bpz = data.pose.position.z
+#    rospy.set_param('/Bpx',Bpx)
+#    rospy.set_param('/Bpy',Bpy)
+    rospy.set_param('/Bpz',Bpz)
+
+
+def define_color(data):
+    global color
+    color = data.color
+
 
 def listener():
     rospy.init_node('listener',anonymous=True)
@@ -133,10 +146,12 @@ def listener():
     #subscribe to color topic
     
 
-    
-
+    rospy.Service('handle_image_proc',image_proc,define_color)
     rospy.Subscriber("/robot/limb/left/endpoint_state",EndpointState,get_body_stuff)
     rospy.Subscriber("/cameras/left_hand_camera/image",Image,imagecb)
+    rospy.set_parameter('/x_baxter',xb)
+    rospy.set_parameter('/y_baxter',yb)
+    
     #Def node as subscriber with rostopic
     rospy.spin()
     #Loops python until node stopped
